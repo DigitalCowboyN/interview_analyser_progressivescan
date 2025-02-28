@@ -11,9 +11,14 @@ import numpy as np
 import pandas as pd
 import spacy
 import logging
+import yaml
 from sentence_transformers import SentenceTransformer
 import hdbscan
 from sklearn.preprocessing import StandardScaler
+
+# Load configuration from config.yaml
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
 
 # Load spaCy model (English)
 nlp = spacy.load("en_core_web_sm")
@@ -22,8 +27,7 @@ nlp = spacy.load("en_core_web_sm")
 logger = logging.getLogger(__name__)
 
 # Initialize Sentence Transformer model for embedding generation.
-DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-embedder = SentenceTransformer(DEFAULT_EMBEDDING_MODEL)
+embedder = SentenceTransformer(config["embedding"]["model_name"])
 
 # Import tqdm for progress bars.
 from tqdm import tqdm
@@ -80,7 +84,7 @@ def generate_embeddings(sentences, context_window=1):
         base_embeddings = embedder.encode(sentence_texts, convert_to_numpy=True)
     except Exception as e:
         logger.error(f"Embedding generation failed: {e}")
-        return np.array([])
+        return np.zeros((len(sentences), config["embedding"]["embedding_dim"]))
 
     def compute_context_embedding(i):
         start = max(0, i - context_window)
@@ -447,10 +451,12 @@ def resolve_conflict(local_label, global_label, local_confidence, global_confide
     weight_local = config["classification"]["final"].get("final_weight_local", 0.6)
     weight_global = config["classification"]["final"].get("final_weight_global", 0.4)
     
-    total_confidence = local_confidence + global_confidence
-    if total_confidence > 0:
-        weight_local = local_confidence / total_confidence
-        weight_global = global_confidence / total_confidence
+    if local_confidence >= local_threshold and global_confidence >= global_threshold:
+        weight_local = local_confidence / (local_confidence + global_confidence)
+        weight_global = global_confidence / (local_confidence + global_confidence)
+    else:
+        weight_local = config["classification"]["final"]["final_weight_local"]
+        weight_global = config["classification"]["final"]["final_weight_global"]
 
     local_weighted = weight_local * local_confidence if local_confidence >= local_threshold else 0.0
     global_weighted = weight_global * global_confidence if global_confidence >= global_threshold else 0.0
