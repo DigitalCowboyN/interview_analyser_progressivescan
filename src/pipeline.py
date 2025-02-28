@@ -81,19 +81,19 @@ def generate_embeddings(sentences, context_window=1):
     
     if not sentences:
         logger.warning("No sentences provided for embedding generation.")
-        return np.array([])
+        return np.zeros((1, config["embedding"]["embedding_dim"]))
 
     sentence_texts = [s["sentence"] for s in sentences if s["sentence"].strip()]
-    
+
     if not sentence_texts:
         logger.warning("All sentences are empty after preprocessing.")
-        return np.array([])
+        return np.zeros((1, config["embedding"]["embedding_dim"]))
 
     try:
         base_embeddings = embedder.encode(sentence_texts, convert_to_numpy=True)
     except Exception as e:
         logger.error(f"Embedding generation failed: {e}")
-        return np.zeros((len(sentences), config["embedding"]["embedding_dim"]))
+        return np.zeros((1, config["embedding"]["embedding_dim"]))
 
     def compute_context_embedding(i):
         start = max(0, i - context_window)
@@ -192,6 +192,8 @@ def classify_local(sentences, embeddings, config):
             )
             try:
                 response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30)
+                if not response_no_context or "<" not in response_no_context or "[" not in response_no_context:
+                    raise ValueError("Malformed response from model.")
                 logger.debug(f"Model response (no context) for sentence ID {item['id']}: {response_no_context}")
             except Exception as e:
                 logger.error(f"Error generating response (no context) for sentence ID {item['id']}: {e}")
