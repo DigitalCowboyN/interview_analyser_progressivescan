@@ -151,6 +151,8 @@ def aggregate_local_context(idx, sentences, embeddings, config):
     
     return context_str
 
+from concurrent.futures import ThreadPoolExecutor
+
 def classify_local(sentences, embeddings, config):
     """
     Classify each sentence individually using LLaMA-2 via prompt engineering.
@@ -173,6 +175,12 @@ def classify_local(sentences, embeddings, config):
     prompt_no_context = config["classification"]["local"]["prompt_no_context"]
     prompt_with_context = config["classification"]["local"]["prompt_with_context"]
     confidence_threshold = config["classification"]["local"]["confidence_threshold"]
+
+    def classify_sentence(idx, item):
+        return process_sentence(idx, item, sentences, embeddings, config)
+
+    with ThreadPoolExecutor() as executor:
+        results = list(executor.map(classify_sentence, range(len(sentences)), sentences))
 
     # Wrap the loop in a tqdm progress bar.
 from concurrent.futures import ThreadPoolExecutor
