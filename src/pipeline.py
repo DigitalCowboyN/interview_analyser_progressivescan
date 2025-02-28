@@ -374,7 +374,7 @@ def cluster_sentences(embeddings, config):
 
 def aggregate_global_context(cluster_sentences, cluster_embeddings, config):
     """
-    Generate a context string for a cluster based on the specified aggregation method.
+    Generate a context string for a cluster while ensuring it fits within the model's token limit.
     
     Args:
         cluster_sentences (list of str): All sentences in the cluster.
@@ -384,31 +384,39 @@ def aggregate_global_context(cluster_sentences, cluster_embeddings, config):
     Returns:
         tuple: A tuple containing:
             - cluster_summary (str): A brief summary or representative text from the cluster.
-            - context_str (str): An aggregated context string based on the chosen method.
+            - context_str (str): A truncated context string optimized for token limits.
     """
+    max_tokens = 512  # Model's token limit
+    estimated_token_ratio = 1.3  # Approximate words-to-tokens ratio
+    max_context_tokens = max_tokens // 2  # Reserve space for prompt & response
+
     method = config["classification"]["global"].get("context_aggregation_method", "representative_sentences")
-    
-    # Create a brief summary: For now, we simply use the first few sentences.
-    # In a production system, you might run a summarizer here.
     summary_count = config["classification"]["global"].get("summary_sentence_count", 3)
+
+    # Create a brief summary using the most relevant sentences
     cluster_summary = " ".join(cluster_sentences[:summary_count])
-    
+
     if method == "representative_sentences":
-        # Use the same representative sentences as the summary.
-        context_str = cluster_summary
+        selected_context = cluster_sentences[:summary_count]
     elif method == "summary":
-        # Placeholder: in practice, call an external summarizer here.
-        context_str = f"Summary: {cluster_summary}"
+        selected_context = [f"Summary: {cluster_summary}"]
     elif method == "embedding":
-        # Compute the average embedding for the cluster and format it as a comma-separated string.
         if len(cluster_embeddings) > 0:
             avg_embedding = cluster_embeddings.mean(axis=0)
-            context_str = ", ".join([f"{x:.4f}" for x in avg_embedding])
+            selected_context = [", ".join([f"{x:.4f}" for x in avg_embedding])]
         else:
-            context_str = "[]"
+            selected_context = ["[]"]
     else:
-        context_str = ""
-    
+        selected_context = []
+
+    # Estimate token count and truncate if necessary
+    estimated_tokens = sum(len(sent.split()) for sent in selected_context) / estimated_token_ratio
+    while estimated_tokens > max_context_tokens and len(selected_context) > 1:
+        selected_context.pop()  # Remove the last sentence to reduce token count
+        estimated_tokens = sum(len(sent.split()) for sent in selected_context) / estimated_token_ratio
+
+    context_str = " ".join(selected_context)
+
     return cluster_summary, context_str
 
 from tqdm import tqdm
