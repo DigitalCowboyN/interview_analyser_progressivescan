@@ -173,7 +173,7 @@ def classify_local(sentences, embeddings, config):
     # Wrap the loop in a tqdm progress bar.
 from concurrent.futures import ThreadPoolExecutor
 
-    def classify_sentence(idx, item):
+def classify_sentence(idx, item):
         try:
             full_prompt_no_context = (
                 f"{prompt_no_context}\n\n"
