@@ -118,7 +118,7 @@ llama_model.max_new_tokens = 30
 ############################################
 def aggregate_local_context(idx, sentences, embeddings, config):
     """
-    Generate a context string for a given sentence based on the specified aggregation method.
+    Generate a context string for a given sentence while ensuring it fits within the model's token limit.
     
     Args:
         idx (int): The index of the current sentence.
@@ -127,37 +127,32 @@ def aggregate_local_context(idx, sentences, embeddings, config):
         config (dict): Configuration parameters that include context aggregation settings.
     
     Returns:
-        str: A context string to include in the prompt.
+        str: A truncated context string optimized for token limits.
     """
-    method = config["classification"]["local"].get("context_aggregation_method", "embedding")
-    
-    if method == "embedding":
-        # Use the raw enriched embedding converted to a comma-separated string.
-        if embeddings is not None and idx < len(embeddings):
-            embedding_vector = embeddings[idx]
-            context_str = ", ".join([f"{x:.4f}" for x in embedding_vector])
+    max_tokens = 512  # Model's token limit
+    estimated_token_ratio = 1.3  # Approximate words-to-tokens ratio
+    max_context_tokens = max_tokens // 2  # Reserve space for prompt & response
+
+    # Define context window sizes for multiple passes
+    context_windows = [1, 2, 4, 7]
+    selected_context = []
+
+    for window in context_windows:
+        start = max(0, idx - window)
+        end = min(len(sentences), idx + window + 1)
+        context_sentences = [sentences[i]["sentence"] for i in range(start, end) if i != idx]
+
+        # Estimate token count
+        estimated_tokens = sum(len(sent.split()) for sent in context_sentences) / estimated_token_ratio
+
+        if estimated_tokens <= max_context_tokens:
+            selected_context = context_sentences
         else:
-            context_str = "[]"
-    elif method == "neighboring_sentences":
-        # Use neighboring sentences (e.g., previous and next sentences) as context.
-        window = config["classification"]["local"].get("context_window", 1)
-        start = max(0, idx - window)
-        end = min(len(sentences), idx + window + 1)
-        neighbor_texts = [sentences[i]["sentence"] for i in range(start, end) if i != idx]
-        context_str = " ".join(neighbor_texts)
-    elif method == "summary":
-        # For a more advanced method, you might use a summarizer on the neighboring sentences.
-        window = config["classification"]["local"].get("context_window", 3)
-        start = max(0, idx - window)
-        end = min(len(sentences), idx + window + 1)
-        neighbor_texts = [sentences[i]["sentence"] for i in range(start, end) if i != idx]
-        # Here you could call a summarization function; for now, we simply join them.
-        context_str = " ".join(neighbor_texts)
-        # Optionally, you could integrate an external summarization API/model here.
-    else:
-        # Fallback: just return an empty context.
-        context_str = "[]"
-    
+            break  # Stop expanding if we exceed the token limit
+
+    # Join selected context sentences
+    context_str = " ".join(selected_context)
+
     return context_str
 
 from concurrent.futures import ThreadPoolExecutor
