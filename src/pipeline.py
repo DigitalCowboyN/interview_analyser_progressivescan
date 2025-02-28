@@ -177,7 +177,62 @@ def classify_local(sentences, embeddings, config):
     confidence_threshold = config["classification"]["local"]["confidence_threshold"]
 
     def classify_sentence(idx, item, prompt_no_context, prompt_with_context, confidence_threshold, sentences, embeddings):
-        return classify_sentence(idx, item, prompt_no_context, prompt_with_context, confidence_threshold, sentences, embeddings)
+        """
+        Classify a single sentence using LLaMA-2 with and without context.
+        """
+        try:
+            full_prompt_no_context = (
+                f"{prompt_no_context}\n\n"
+                f"Input Sentence: \"{item['sentence']}\"\n"
+                f"Context: []"
+            )
+            response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30)
+            logger.debug(f"Model response (no context) for sentence ID {item['id']}: {response_no_context}")
+        except Exception as e:
+            logger.error(f"Error during local classification for sentence ID {item['id']}: {e}")
+            return None
+
+        label_match_no_context = re.search(r"<(.*?)>", response_no_context)
+        confidence_match_no_context = re.search(r"\[(.*?)\]", response_no_context)
+
+        label_no_context = label_match_no_context.group(1).strip() if label_match_no_context else "Unknown"
+        try:
+            confidence_no_context = float(confidence_match_no_context.group(1).strip()) if confidence_match_no_context else 0.0
+        except ValueError:
+            confidence_no_context = 0.0
+
+        if confidence_no_context < confidence_threshold:
+            label_no_context = "Unknown"
+
+        context_str = aggregate_local_context(idx, sentences, embeddings, config)
+        full_prompt_with_context = (
+            f"{prompt_with_context}\n\n"
+            f"Input Sentence: \"{item['sentence']}\"\n"
+            f"Context: {context_str}"
+        )
+        response_with_context = llama_model(full_prompt_with_context, max_new_tokens=30)
+        logger.debug(f"Model response (with context) for sentence ID {item['id']}: {response_with_context}")
+
+        label_match_with_context = re.search(r"<(.*?)>", response_with_context)
+        confidence_match_with_context = re.search(r"\[(.*?)\]", response_with_context)
+
+        label_with_context = label_match_with_context.group(1).strip() if label_match_with_context else "Unknown"
+        try:
+            confidence_with_context = float(confidence_match_with_context.group(1).strip()) if confidence_match_with_context else 0.0
+        except ValueError:
+            confidence_with_context = 0.0
+
+        if confidence_with_context < confidence_threshold:
+            label_with_context = "Unknown"
+
+        return {
+            "id": item["id"],
+            "sentence": item["sentence"],
+            "local_label_no_context": label_no_context,
+            "local_confidence_no_context": confidence_no_context,
+            "local_label_with_context": label_with_context,
+            "local_confidence_with_context": confidence_with_context
+        }
 
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(classify_sentence, range(len(sentences)), sentences))
@@ -234,14 +289,6 @@ def classify_sentence(idx, item, prompt_no_context, prompt_with_context, confide
         if confidence_with_context < confidence_threshold:
             label_with_context = "Unknown"
 
-    return {
-            "id": item["id"],
-            "sentence": item["sentence"],
-            "local_label_no_context": label_no_context,
-            "local_confidence_no_context": confidence_no_context,
-            "local_label_with_context": label_with_context,
-            "local_confidence_with_context": confidence_with_context
-        })
 
 def classify_local(sentences, embeddings, config):
     logger.info("Performing local classification using LLaMA-2 with two separate prompts (with and without context).")
@@ -254,7 +301,7 @@ def classify_local(sentences, embeddings, config):
         return classify_sentence(idx, item, prompt_no_context, prompt_with_context, confidence_threshold, sentences, embeddings)
 
     with ThreadPoolExecutor() as executor:
-        results = list(executor.map(classify_sentence_wrapper, range(len(sentences)), sentences))
+        results = list(executor.map(lambda idx_item: classify_sentence_wrapper(*idx_item), enumerate(sentences)))
 
     df_local = pd.DataFrame(results)
     logger.info("Local classification completed for all sentences.")
