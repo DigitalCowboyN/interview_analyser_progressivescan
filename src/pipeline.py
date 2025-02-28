@@ -181,7 +181,10 @@ def classify_sentence(idx, item):
                 f"Context: []"
             )
             response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30)
-        logger.debug(f"Model response (no context) for sentence ID {item['id']}: {response_no_context}")
+            logger.debug(f"Model response (no context) for sentence ID {item['id']}: {response_no_context}")
+        except Exception as e:
+            logger.error(f"Error during local classification for sentence ID {item['id']}: {e}")
+            return None
 
         # Extract label (in angle brackets) and confidence (in square brackets)
         label_match_no_context = re.search(r"<(.*?)>", response_no_context)
