@@ -1,0 +1,105 @@
+# # config.yaml. Stores all the tunable parameters and settings outside code
+
+# Preprocessing settings (e.g., context window size, spaCy custom rules).
+# Embedding settings (model name, dimension, etc.).
+# Clustering parameters (HDBSCAN's min_cluster_size, distance metric).
+# Classification prompts and thresholds for local/global conflict resolution.
+# File paths (e.g., where to find interview transcripts, where to save intermediate outputs).
+
+preprocessing:
+  context_window: 1            # Number of sentences before/after to include for context
+  custom_spacy_rules: []       # List any custom rules if needed (e.g., regex patterns)
+
+embedding:
+  model_name: "all-MiniLM-L6-v2"  # Sentence Transformer model name
+  embedding_dim: 384            # (Optional) Dimensionality of the embeddings
+
+clustering:
+  algorithm: "HDBSCAN"
+  hdbscan:
+    min_cluster_size: 5        # Minimum cluster size for HDBSCAN
+    metric: "euclidean"        # Distance metric for clustering
+    # You can add additional HDBSCAN parameters here if needed
+
+classification:
+  local:
+    model: "LLaMA-2"           # Indicate which model is being used (for reference)
+    # Prmopt for local classification
+    prompt_no_context: |
+      [INSTRUCTION]
+      You are an expert transcript analyzer specializing in the classification of conversational content. Your task is to analyze a single sentence extracted from an interview transcript without any additional context, and assign a concise topic label that best captures its main subject. Additionally, you must provide a confidence score for your classification.
+
+      [FORMAT]
+      - **Input Sentence:** The sentence to be classified is provided within double quotation marks.
+      - **Context:** None (an empty context is provided).
+      - **Output:** Your answer should consist of the topic label enclosed in angle brackets followed immediately by a numerical confidence score in square brackets. For example:
+        <Marketing Strategy> [0.95]
+      - Do not include any extra commentary or explanation.
+
+      [EXAMPLE]
+      Input Sentence: "I believe our current marketing strategy needs an overhaul."
+      Context: []
+      Output: <Marketing Strategy> [0.95]
+
+      [TASK]
+      For the given input, analyze the content carefully and return only the topic label in the specified format.
+    # Prompt for local classification with context
+    prompt_with_context: |
+      [INSTRUCTION]
+      You are an expert transcript analyst specializing in the classification of conversational content. Your task is to analyze a single sentence extracted from an interview transcript while considering additional context provided as numerical embedding values. Assign a concise topic label that best captures its main subject, and provide a confidence score for your classification.
+
+      [FORMAT]
+      - **Input Sentence:** The sentence to be classified is provided within double quotation marks.
+      - **Context:** Additional context is provided as a list of numerical values representing an enriched embedding.
+      - **Output:** Your answer should consist of the topic label enclosed in angle brackets followed immediately by a numerical confidence score in square brackets. For example:
+        <Marketing Strategy> [0.92]
+      - Do not include any extra commentary or explanation.
+
+      [EXAMPLE]
+      Input Sentence: "I believe our current marketing strategy needs an overhaul."
+      Context: [0.1234, 0.5678, 0.9101, ...]
+      Output: <Marketing Strategy> [0.92]
+
+      [TASK]
+      For the given input, analyze the content carefully while taking into account the numerical context, and return only the topic label in the specified format.
+    confidence_threshold: 0.6  # Threshold above which to trust local classification
+    context_aggregation_method: "neighboring_sentences"  # Options: "embedding", "neighboring_sentences", "summary"
+    context_window: 1  # Number of neighboring sentences to include (if applicable)
+  global:
+  # Prompt for global classification
+    prompt: |
+      [INSTRUCTION]
+      You are a seasoned transcript analyst specializing in thematic clustering. Your task is to review an aggregated summary representing a cluster of sentences from an interview transcript. Based on this summary, determine a single, overarching thematic label that best encapsulates the common subject matter of the cluster. Additionally, provide a confidence score for your classification.
+
+      [FORMAT]
+      - **Cluster Summary:** The summary is provided within double quotation marks.
+      - **Output:** Your response should be a single, succinct thematic label enclosed in angle brackets, followed immediately by a numerical confidence score in square brackets. For example:
+        <Marketing & Customer Engagement> [0.93]
+      - Do not include any extra commentary or explanation.
+
+      [EXAMPLE]
+      Cluster Summary: "Discussions cover new marketing strategies, challenges in customer engagement, and innovative ideas for digital campaigns."
+      Output: <Marketing & Customer Engagement> [0.93]
+
+      [TASK]
+      Analyze the provided cluster summary carefully and return only the thematic label in the specified format.
+    confidence_threshold: 0.6  # Threshold above which to trust local classification
+    context_aggregation_method: "representative_sentences"  # Options: representative_sentences, summary, embedding
+    summary_sentence_count: 3  # Number of sentences to include in the summary
+  final:
+    final_weight_local: 0.6    # Weight for local classification output in conflict resolution
+    final_weight_global: 0.4   # Weight for global classification output in conflict resolution
+
+paths:
+  data_dir: "data/interviews"  # Directory where transcript files are stored
+  logs_dir: "logs"             # Directory for log files
+  output_dir: "output"         # Directory to store intermediate and final outputs
+
+docker:
+  base_image: "ghcr.io/ggerganov/llama.cpp:light"
+  python_version: "3.10"       # Python version used in the Docker container
+
+# Additional parameters for future enhancements (e.g., fine-tuning, API endpoints, etc.)
+additional:
+  use_weighted_context: true   # Whether to use weighted averaging for context embeddings
+  visualize_embeddings: false  # Whether to generate embedding visualizations. Allows for visual inspection of relationhsip, clusters, and overal structure (e.g., PCA/t-SNE)

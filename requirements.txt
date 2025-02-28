@@ -1,0 +1,41 @@
+filelock==3.16.1
+fsspec==2024.12.0
+Jinja2==3.1.5
+MarkupSafe==3.0.2
+mpmath==1.3.0
+networkx==3.4.2
+numpy==1.23.5
+pandas==1.5.3
+pillow==11.1.0
+sympy==1.13.1
+typing_extensions==4.12.2
+webvtt-py==0.4.6
+# transformers==4.20.1
+accelerate==0.21.0
+
+# The important part: all in the 2.2.x family
+torch==2.2.0
+torchvision==0.17.0
+torchaudio==2.2.0
+
+pyannote.core==5.0
+pyannote.audio==3.3.2
+
+# OpenAI Whisper
+openai-whisper
+
+# Sentence Transformers and dependencies
+sentence-transformers==2.2.2
+hdbscan==0.8.33
+huggingface-hub>=0.14.1,<0.17.0
+
+# For LLaMA model == Removed and moved to Docker File
+# ctransformers==0.2.27 --no-binary :all:
+
+# SpaCy for sentence tokenization
+spacy==3.5.4
+
+# pytest for automated testing
+pytest==7.4.0
+
+# Ensure FFmpeg >= 4.2 is installed via Dockerfile or system-level package manager.
