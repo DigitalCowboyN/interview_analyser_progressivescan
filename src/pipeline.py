@@ -176,8 +176,8 @@ def classify_local(sentences, embeddings, config):
     prompt_with_context = config["classification"]["local"]["prompt_with_context"]
     confidence_threshold = config["classification"]["local"]["confidence_threshold"]
 
-    def classify_sentence(idx, item):
-        return process_sentence(idx, item, sentences, embeddings, config)
+    def classify_sentence(idx, item, prompt_no_context, prompt_with_context, confidence_threshold, sentences, embeddings):
+        return classify_sentence(idx, item, prompt_no_context, prompt_with_context, confidence_threshold, sentences, embeddings)
 
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(classify_sentence, range(len(sentences)), sentences))
@@ -185,7 +185,7 @@ def classify_local(sentences, embeddings, config):
     # Wrap the loop in a tqdm progress bar.
 from concurrent.futures import ThreadPoolExecutor
 
-def classify_sentence(idx, item):
+def classify_sentence(idx, item, prompt_no_context, prompt_with_context, confidence_threshold, sentences, embeddings):
         try:
             full_prompt_no_context = (
                 f"{prompt_no_context}\n\n"
@@ -234,7 +234,7 @@ def classify_sentence(idx, item):
         if confidence_with_context < confidence_threshold:
             label_with_context = "Unknown"
 
-        results.append({
+    return {
             "id": item["id"],
             "sentence": item["sentence"],
             "local_label_no_context": label_no_context,
@@ -243,9 +243,22 @@ def classify_sentence(idx, item):
             "local_confidence_with_context": confidence_with_context
         })
 
-        df_local = pd.DataFrame(results)
-        logger.info("Local classification completed for all sentences.")
-        return df_local
+def classify_local(sentences, embeddings, config):
+    logger.info("Performing local classification using LLaMA-2 with two separate prompts (with and without context).")
+    results = []
+    prompt_no_context = config["classification"]["local"]["prompt_no_context"]
+    prompt_with_context = config["classification"]["local"]["prompt_with_context"]
+    confidence_threshold = config["classification"]["local"]["confidence_threshold"]
+
+    def classify_sentence_wrapper(idx, item):
+        return classify_sentence(idx, item, prompt_no_context, prompt_with_context, confidence_threshold, sentences, embeddings)
+
+    with ThreadPoolExecutor() as executor:
+        results = list(executor.map(classify_sentence_wrapper, range(len(sentences)), sentences))
+
+    df_local = pd.DataFrame(results)
+    logger.info("Local classification completed for all sentences.")
+    return df_local
 
 
 ############################################
