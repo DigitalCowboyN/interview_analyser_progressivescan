@@ -217,7 +217,38 @@ def classify_local(sentences, embeddings, config):
         if confidence_no_context < confidence_threshold:
             label_no_context = "Unknown"
 
-        context_str = aggregate_local_context(idx, sentences, embeddings, config)
+        # Perform multiple passes with increasing context window sizes
+        context_windows = [1, 2, 4, 7]
+        best_label = "Unknown"
+        best_confidence = 0.0
+
+        for window in context_windows:
+            start = max(0, idx - window)
+            end = min(len(sentences), idx + window + 1)
+            context_sentences = [sentences[i]["sentence"] for i in range(start, end) if i != idx]
+            context_str = " ".join(context_sentences)
+
+            full_prompt_with_context = (
+                f"{prompt_with_context}\n\n"
+                f"Input Sentence: \"{item['sentence']}\"\n"
+                f"Context: {context_str}"
+            )
+
+            response_with_context = llama_model(full_prompt_with_context, max_new_tokens=30)
+            logger.debug(f"Model response (context window {window}) for sentence ID {item['id']}: {response_with_context}")
+
+            label_match_with_context = re.search(r"<(.*?)>", response_with_context)
+            confidence_match_with_context = re.search(r"\[(.*?)\]", response_with_context)
+
+            label_with_context = label_match_with_context.group(1).strip() if label_match_with_context else "Unknown"
+            try:
+                confidence_with_context = float(confidence_match_with_context.group(1).strip()) if confidence_match_with_context else 0.0
+            except ValueError:
+                confidence_with_context = 0.0
+
+            if confidence_with_context > best_confidence:
+                best_label = label_with_context
+                best_confidence = confidence_with_context
         full_prompt_with_context = (
             f"{prompt_with_context}\n\n"
             f"Input Sentence: \"{item['sentence']}\"\n"
