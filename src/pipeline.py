@@ -231,9 +231,9 @@ def classify_sentence(idx, item):
             "local_confidence_with_context": confidence_with_context
         })
 
-    df_local = pd.DataFrame(results)
-    logger.info("Local classification completed for all sentences.")
-    return df_local
+        df_local = pd.DataFrame(results)
+        logger.info("Local classification completed for all sentences.")
+        return df_local
 
 
 ############################################
