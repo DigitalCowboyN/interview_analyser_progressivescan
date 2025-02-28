@@ -78,7 +78,16 @@ def generate_embeddings(sentences, context_window=1):
         np.array: Array of enriched embeddings.
     """
     logger.info("Generating base embeddings using Sentence Transformers.")
-    sentence_texts = [s["sentence"] for s in sentences]
+    
+    if not sentences:
+        logger.warning("No sentences provided for embedding generation.")
+        return np.array([])
+
+    sentence_texts = [s["sentence"] for s in sentences if s["sentence"].strip()]
+    
+    if not sentence_texts:
+        logger.warning("All sentences are empty after preprocessing.")
+        return np.array([])
 
     try:
         base_embeddings = embedder.encode(sentence_texts, convert_to_numpy=True)
@@ -186,8 +195,12 @@ def classify_local(sentences, embeddings, config):
                 f"Input Sentence: \"{item['sentence']}\"\n"
                 f"Context: []"
             )
-            response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30)
-            logger.debug(f"Model response (no context) for sentence ID {item['id']}: {response_no_context}")
+            try:
+                response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30)
+                logger.debug(f"Model response (no context) for sentence ID {item['id']}: {response_no_context}")
+            except Exception as e:
+                logger.error(f"Error generating response (no context) for sentence ID {item['id']}: {e}")
+                response_no_context = "<Unknown> [0.0]"
         except Exception as e:
             logger.error(f"Error during local classification for sentence ID {item['id']}: {e}")
             return None
@@ -405,10 +418,18 @@ def classify_global(sentences, embeddings, cluster_labels, config):
     unique_clusters = sorted(df["cluster"].unique())
     for cluster in tqdm(unique_clusters, desc="Global Classification"):
         if cluster == -1:
-            # Outlier cluster – assign a default label and assume full confidence.
-            global_label = "Unassigned"
-            global_conf = 1.0
-            cluster_ids = df[df["cluster"] == cluster]["id"].tolist()
+            # Handle outliers by assigning them to the closest cluster based on embedding similarity.
+            logger.warning(f"Handling outlier cluster {cluster}. Assigning to nearest cluster.")
+            outlier_indices = df[df["cluster"] == cluster].index.tolist()
+            outlier_embeddings = embeddings[outlier_indices]
+
+            # Compute similarity to all other clusters
+            cluster_means = {c: embeddings[df[df["cluster"] == c].index].mean(axis=0) for c in unique_clusters if c != -1}
+            closest_cluster = min(cluster_means, key=lambda c: np.linalg.norm(outlier_embeddings.mean(axis=0) - cluster_means[c]))
+
+            # Assign outliers to the closest cluster
+            df.loc[outlier_indices, "cluster"] = closest_cluster
+            cluster = closest_cluster  # Continue processing as a normal cluster
         else:
             # Get all sentences for the cluster.
             cluster_sentence_list = df[df["cluster"] == cluster]["sentence"].tolist()
