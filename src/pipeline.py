@@ -60,6 +60,8 @@ def segment_text(text):
 ############################################
 # 2. Embedding Generation with Contextual Enrichment
 ############################################
+from concurrent.futures import ThreadPoolExecutor
+
 def generate_embeddings(sentences, context_window=1):
     """
     Generate embeddings for each sentence and enrich them with a context window.
@@ -73,18 +75,21 @@ def generate_embeddings(sentences, context_window=1):
     """
     logger.info("Generating base embeddings using Sentence Transformers.")
     sentence_texts = [s["sentence"] for s in sentences]
-    base_embeddings = embedder.encode(sentence_texts, convert_to_numpy=True)
-    
-    enriched_embeddings = []
-    total = len(base_embeddings)
-    for i in range(total):
-        # Define indices for the context window.
+
+    try:
+        base_embeddings = embedder.encode(sentence_texts, convert_to_numpy=True)
+    except Exception as e:
+        logger.error(f"Embedding generation failed: {e}")
+        return np.array([])
+
+    def compute_context_embedding(i):
         start = max(0, i - context_window)
-        end = min(total, i + context_window + 1)
-        # Compute the average embedding over the window.
-        context_embedding = np.mean(base_embeddings[start:end], axis=0)
-        enriched_embeddings.append(context_embedding)
-    
+        end = min(len(base_embeddings), i + context_window + 1)
+        return np.mean(base_embeddings[start:end], axis=0)
+
+    with ThreadPoolExecutor() as executor:
+        enriched_embeddings = list(executor.map(compute_context_embedding, range(len(base_embeddings))))
+
     logger.info("Generated context-aware embeddings for all sentences.")
     return np.array(enriched_embeddings)
 
@@ -166,14 +171,16 @@ def classify_local(sentences, embeddings, config):
     confidence_threshold = config["classification"]["local"]["confidence_threshold"]
 
     # Wrap the loop in a tqdm progress bar.
-    for idx, item in tqdm(enumerate(sentences), total=len(sentences), desc="Local Classification"):
-        # ----- Classification without context -----
-        full_prompt_no_context = (
-            f"{prompt_no_context}\n\n"
-            f"Input Sentence: \"{item['sentence']}\"\n"
-            f"Context: []"
-        )
-        response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30)
+from concurrent.futures import ThreadPoolExecutor
+
+    def classify_sentence(idx, item):
+        try:
+            full_prompt_no_context = (
+                f"{prompt_no_context}\n\n"
+                f"Input Sentence: \"{item['sentence']}\"\n"
+                f"Context: []"
+            )
+            response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30)
         logger.debug(f"Model response (no context) for sentence ID {item['id']}: {response_no_context}")
 
         # Extract label (in angle brackets) and confidence (in square brackets)
@@ -437,6 +444,11 @@ def resolve_conflict(local_label, global_label, local_confidence, global_confide
     weight_local = config["classification"]["final"].get("final_weight_local", 0.6)
     weight_global = config["classification"]["final"].get("final_weight_global", 0.4)
     
+    total_confidence = local_confidence + global_confidence
+    if total_confidence > 0:
+        weight_local = local_confidence / total_confidence
+        weight_global = global_confidence / total_confidence
+
     local_weighted = weight_local * local_confidence if local_confidence >= local_threshold else 0.0
     global_weighted = weight_global * global_confidence if global_confidence >= global_threshold else 0.0
     
