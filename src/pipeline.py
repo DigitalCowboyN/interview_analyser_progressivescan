@@ -100,7 +100,7 @@ def generate_embeddings(sentences, context_window=1):
         end = min(len(base_embeddings), i + context_window + 1)
         return np.mean(base_embeddings[start:end], axis=0)
 
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=2) as executor:
         enriched_embeddings = list(executor.map(compute_context_embedding, range(len(base_embeddings))))
 
     logger.info("Generated context-aware embeddings for all sentences.")
@@ -110,7 +110,7 @@ def generate_embeddings(sentences, context_window=1):
 # Initialize the LLaMA-2 model using the path from config.yaml
 ############################################
 llama_model_path = config["classification"]["local"].get("llama_model_path", "/models/llama-2-7b-chat.Q4_K_M.gguf")
-llama_model = AutoModelForCausalLM.from_pretrained(llama_model_path)
+llama_model = AutoModelForCausalLM.from_pretrained(llama_model_path, gpu_layers=0)
 llama_model.max_new_tokens = 30
 
 ############################################
@@ -288,7 +288,15 @@ def classify_sentence(idx, item, prompt_no_context, prompt_with_context, confide
                 f"Input Sentence: \"{item['sentence']}\"\n"
                 f"Context: []"
             )
-            response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30)
+            import subprocess
+            import shlex
+
+            command = f'python -c "from ctransformers import AutoModelForCausalLM; model = AutoModelForCausalLM.from_pretrained(\'{llama_model_path}\', gpu_layers=0); print(model(\'{full_prompt_no_context}\', max_new_tokens=30))"'
+            try:
+                response_no_context = subprocess.check_output(shlex.split(command), text=True, stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Subprocess error: {e.output}")
+                response_no_context = "<Unknown> [0.0]"
             logger.debug(f"Model response (no context) for sentence ID {item['id']}: {response_no_context}")
         except Exception as e:
             logger.error(f"Error during local classification for sentence ID {item['id']}: {e}")
