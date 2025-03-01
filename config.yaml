@@ -24,6 +24,7 @@ clustering:
 classification:
   local:
     model: "LLaMA-2"           # Indicate which model is being used (for reference)
+    llama_model_path: "/models/llama-2-7b-chat.Q4_K_M.gguf"
     # Prmopt for local classification
     prompt_no_context: |
       [INSTRUCTION]
