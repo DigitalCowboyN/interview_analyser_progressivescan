@@ -5,6 +5,10 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import yaml
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 from src.pipeline import (
     segment_text,
     generate_embeddings,
@@ -40,9 +44,14 @@ def run_manual_test():
     print("Generated embeddings.")
 
     print("Starting local classification...")
+    logger.debug(f"Embeddings shape: {embeddings.shape if hasattr(embeddings, 'shape') else type(embeddings)}")
 
     # Step 3: Local Classification
-    df_local = classify_local(sentences, embeddings, config)
+    try:
+        df_local = classify_local(sentences, embeddings, config)
+    except Exception as e:
+        logger.error(f"Error during local classification: {e}", exc_info=True)
+        return
     print("Completed local classification.")
     print(df_local)  # Debugging: Print local classification results
 
