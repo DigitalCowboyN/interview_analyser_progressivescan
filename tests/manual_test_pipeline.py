@@ -39,17 +39,22 @@ def run_manual_test():
     embeddings = generate_embeddings(sentences, context_window=config["preprocessing"]["context_window"])
     print("Generated embeddings.")
 
+    print("Starting local classification...")
+
     # Step 3: Local Classification
     df_local = classify_local(sentences, embeddings, config)
     print("Completed local classification.")
+    print(df_local)  # Debugging: Print local classification results
 
     # Step 4: Clustering
     cluster_labels = cluster_sentences(embeddings, config)
     print("Performed clustering.")
+    print(cluster_labels)  # Debugging: Print cluster labels
 
     # Step 5: Global Classification
     df_global = classify_global(sentences, embeddings, cluster_labels, config)
     print("Completed global classification.")
+    print(df_global)  # Debugging: Print global classification results
 
     # Step 6: Merge Local & Global
     merged_df = merge_local_global(df_local, df_global, config)
