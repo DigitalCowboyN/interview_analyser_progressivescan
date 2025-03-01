@@ -34,6 +34,11 @@ huggingface-hub>=0.14.1,<0.17.0
 
 # SpaCy for sentence tokenization
 spacy==3.5.4
+# Ensure the required spaCy model is installed
+spacy[en_core_web_sm]
+
+# Aider for AI-assisted development
+aider
 
 # pytest for automated testing
 pytest==7.4.0
