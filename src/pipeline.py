@@ -207,6 +207,7 @@ def classify_local(sentences, embeddings, config):
             return None
 
         label_match_no_context = re.search(r"\b([A-Za-z]+)\b", response_no_context)
+        confidence_match_no_context = re.search(r"\b(0\.\d+|1\.0)\b", response_no_context)
 
         if label_match_no_context and confidence_match_no_context:
             logger.debug(f"Extracted label: {label_match_no_context.group(1)}, confidence: {confidence_match_no_context.group(1)}")
