@@ -107,10 +107,10 @@ def generate_embeddings(sentences, context_window=1):
     return np.array(enriched_embeddings)
 
 ############################################
-# Initialize the LLaMA-2 model
+# Initialize the LLaMA-2 model using the path from config.yaml
 ############################################
-# Using ctransformers version 0.2.27 as installed, we initialize the model.
-llama_model = AutoModelForCausalLM.from_pretrained("/models/llama-2-7b-chat.Q4_K_M.gguf")
+llama_model_path = config["classification"]["local"].get("llama_model_path", "/models/llama-2-7b-chat.Q4_K_M.gguf")
+llama_model = AutoModelForCausalLM.from_pretrained(llama_model_path)
 llama_model.max_new_tokens = 30
 
 ############################################
