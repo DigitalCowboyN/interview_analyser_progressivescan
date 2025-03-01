@@ -189,9 +189,9 @@ def classify_local(sentences, embeddings, config):
                 f"{prompt_no_context}\n\n"
                 f"Input Sentence: \"{item['sentence']}\"\n"
                 f"Context: []\n\n"
-                f"Please respond strictly in this format: <Category> [Confidence Score]\n"
-                f"Example: <Marketing Strategy> [0.85]\n"
-                f"Do not provide any additional explanation or context."
+                f"Please provide a single-word category that best describes the sentence.\n"
+                f"Example: Marketing, Sales, CustomerSupport, Finance.\n"
+                f"Do not provide any additional explanation."
             )
             try:
                 response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30).strip()
@@ -206,8 +206,7 @@ def classify_local(sentences, embeddings, config):
             logger.error(f"Error during local classification for sentence ID {item['id']}: {e}")
             return None
 
-        label_match_no_context = re.search(r"<(.*?)>", response_no_context)
-        confidence_match_no_context = re.search(r"\[(.*?)\]", response_no_context)
+        label_match_no_context = re.search(r"\b([A-Za-z]+)\b", response_no_context)
 
         if label_match_no_context and confidence_match_no_context:
             logger.debug(f"Extracted label: {label_match_no_context.group(1)}, confidence: {confidence_match_no_context.group(1)}")
@@ -322,10 +321,7 @@ def classify_sentence(idx, item, prompt_no_context, prompt_with_context, confide
         confidence_match_no_context = re.search(r"\[(.*?)\]", response_no_context)
         
         label_no_context = label_match_no_context.group(1).strip() if label_match_no_context else "Unknown"
-        try:
-            confidence_no_context = float(confidence_match_no_context.group(1).strip()) if confidence_match_no_context else 0.0
-        except ValueError:
-            confidence_no_context = 0.0
+        confidence_no_context = 0.8  # Assign a default confidence score
         
         if confidence_no_context < confidence_threshold:
             label_no_context = "Unknown"
