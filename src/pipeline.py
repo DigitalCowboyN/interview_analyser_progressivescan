@@ -353,7 +353,7 @@ def classify_local(sentences, embeddings, config):
     with ThreadPoolExecutor(max_workers=1) as executor:
         results = list(executor.map(lambda idx_item: classify_sentence_wrapper(*idx_item), enumerate(sentences)))
 
-    df_local = pd.DataFrame(results)
+    df_local = pd.DataFrame(results).dropna(subset=["id"])
     logger.info("Local classification completed for all sentences.")
     return df_local
 
@@ -552,6 +552,9 @@ def merge_local_global(df_local, df_global, config):
         pd.DataFrame: Merged DataFrame including a preliminary final label.
     """
     logger.info("Merging local and global outputs.")
+    logger.debug(f"df_local columns: {df_local.columns}")
+    logger.debug(f"df_global columns: {df_global.columns}")
+    
     merged_df = pd.merge(df_local, df_global, on="id", how="left")
     merged_df["final_label"] = merged_df.apply(
         lambda row: resolve_conflict(
