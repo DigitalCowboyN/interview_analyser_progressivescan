@@ -58,6 +58,8 @@ def run_manual_test():
         df_local = classify_local(sentences, embeddings, config)
         logger.info("classify_local() completed successfully.")
         logger.debug(f"Local classification results: {df_local}")
+        logger.debug(f"Local classification results: {df_local}")
+        logger.debug(f"Local classification results: {df_local}")
     except Exception as e:
         logger.error(f"Error during local classification: {e}", exc_info=True)
         return
