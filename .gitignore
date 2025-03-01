@@ -6,3 +6,4 @@ src/__pycache__/
 models/
 logs/s
 .aider*
+tests/__pycache__
