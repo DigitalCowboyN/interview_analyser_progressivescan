@@ -206,7 +206,8 @@ def classify_local(sentences, embeddings, config):
             logger.error(f"Error during local classification for sentence ID {item['id']}: {e}")
             return None
 
-        label_match_no_context = re.search(r"\b([A-Za-z]+)\b", response_no_context)
+        words = re.findall(r"\b[A-Za-z]+\b", response_no_context)
+        label_match_no_context = max(set(words), key=words.count) if words else "Unknown"
         confidence_match_no_context = re.search(r"\b(0\.\d+|1\.0)\b", response_no_context)
 
         if label_match_no_context and confidence_match_no_context:
@@ -218,7 +219,19 @@ def classify_local(sentences, embeddings, config):
                 confidence_no_context = 0.0
         else:
             logger.warning(f"Malformed response (no context) for sentence ID {item['id']}: {response_no_context}")
-            label_no_context = "Unknown"
+            # Fallback: Use a simple keyword-based classifier
+            keyword_map = {
+                "marketing": "Marketing",
+                "sales": "Sales",
+                "customer": "Customer Support",
+                "finance": "Finance"
+            }
+            for word, category in keyword_map.items():
+                if word.lower() in response_no_context.lower():
+                    label_no_context = category
+                    confidence_no_context = 0.6  # Lower confidence for fallback
+                    logger.warning(f"Using fallback classification for sentence ID {item['id']}: {label_no_context}")
+                    break
             confidence_no_context = 0.0
         try:
             confidence_no_context = float(confidence_match_no_context.group(1).strip()) if confidence_match_no_context else 0.0
@@ -322,7 +335,7 @@ def classify_sentence(idx, item, prompt_no_context, prompt_with_context, confide
         confidence_match_no_context = re.search(r"\[(.*?)\]", response_no_context)
         
         label_no_context = label_match_no_context.group(1).strip() if label_match_no_context else "Unknown"
-        confidence_no_context = 0.8  # Assign a default confidence score
+        confidence_no_context = 0.8 if label_match_no_context != "Unknown" else 0.5  # Lower confidence for fallback
         
         if confidence_no_context < confidence_threshold:
             label_no_context = "Unknown"
