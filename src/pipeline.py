@@ -470,6 +470,10 @@ def classify_global(sentences, embeddings, cluster_labels, config):
 
             # Compute similarity to all other clusters
             cluster_means = {c: embeddings[df[df["cluster"] == c].index].mean(axis=0) for c in unique_clusters if c != -1}
+            if not cluster_means:
+                logger.warning("No valid clusters found. Skipping outlier reassignment.")
+                continue  # Skip reassignment if no valid clusters exist
+
             closest_cluster = min(cluster_means, key=lambda c: np.linalg.norm(outlier_embeddings.mean(axis=0) - cluster_means[c]))
 
             # Assign outliers to the closest cluster
