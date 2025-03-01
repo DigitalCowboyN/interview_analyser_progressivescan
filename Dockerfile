@@ -1,7 +1,7 @@
 FROM ghcr.io/ggerganov/llama.cpp:light
 
 # Set the working directory to your project root
-WORKDIR /workspaces/interview_analyzer_ensemble
+WORKDIR /workspaces/interview_analyser_progressivescan
 
 # Install system packages and build tools
 RUN apt-get update && apt-get install -y \
