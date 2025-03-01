@@ -291,7 +291,7 @@ def classify_sentence(idx, item, prompt_no_context, prompt_with_context, confide
             import subprocess
             import shlex
 
-            safe_prompt = full_prompt_no_context.replace('"', '\\"').replace("'", "\\'")
+            safe_prompt = full_prompt_no_context.replace('"', '\\"').replace("'", "\\'").replace("\n", " ")
             command = f'python -c "from ctransformers import AutoModelForCausalLM; model = AutoModelForCausalLM.from_pretrained(\'{llama_model_path}\', gpu_layers=0); print(model(\'{safe_prompt}\', max_new_tokens=30))"'
             try:
                 response_no_context = subprocess.check_output(shlex.split(command), text=True, stderr=subprocess.STDOUT)
@@ -350,7 +350,7 @@ def classify_local(sentences, embeddings, config):
     def classify_sentence_wrapper(idx, item):
         return classify_sentence(idx, item, prompt_no_context, prompt_with_context, confidence_threshold, sentences, embeddings)
 
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=1) as executor:
         results = list(executor.map(lambda idx_item: classify_sentence_wrapper(*idx_item), enumerate(sentences)))
 
     df_local = pd.DataFrame(results)
