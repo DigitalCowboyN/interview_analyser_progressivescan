@@ -111,7 +111,7 @@ def generate_embeddings(sentences, context_window=1):
 ############################################
 llama_model_path = config["classification"]["local"].get("llama_model_path", "/models/llama-2-7b-chat.Q4_K_M.gguf")
 llama_model = AutoModelForCausalLM.from_pretrained(llama_model_path, gpu_layers=0)
-llama_model.max_new_tokens = 30
+llama_model.max_new_tokens = 50  # Increase response length to improve completeness
 
 ############################################
 # 3. Local Classification (Sentence-Level)
@@ -190,7 +190,8 @@ def classify_local(sentences, embeddings, config):
                 f"Input Sentence: \"{item['sentence']}\"\n"
                 f"Context: []\n\n"
                 f"Please respond strictly in this format: <Category> [Confidence Score]\n"
-                f"Example: <Marketing Strategy> [0.85]"
+                f"Example: <Marketing Strategy> [0.85]\n"
+                f"Do not provide any additional explanation or context."
             )
             try:
                 response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30).strip()
@@ -209,6 +210,7 @@ def classify_local(sentences, embeddings, config):
         confidence_match_no_context = re.search(r"\[(.*?)\]", response_no_context)
 
         if label_match_no_context and confidence_match_no_context:
+            logger.debug(f"Extracted label: {label_match_no_context.group(1)}, confidence: {confidence_match_no_context.group(1)}")
             label_no_context = label_match_no_context.group(1).strip()
             try:
                 confidence_no_context = float(confidence_match_no_context.group(1).strip())
