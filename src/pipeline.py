@@ -353,8 +353,14 @@ def classify_local(sentences, embeddings, config):
     with ThreadPoolExecutor(max_workers=1) as executor:
         results = list(executor.map(lambda idx_item: classify_sentence_wrapper(*idx_item), enumerate(sentences)))
 
+    failed_count = sum(1 for r in results if r is None)
+    logger.warning(f"Failed classifications: {failed_count}")
     results = [r for r in results if r is not None]  # Remove None values
     logger.debug(f"Valid local classification results: {len(results)}")
+    if not results:
+        logger.error("No valid classification results. Returning empty DataFrame.")
+        return pd.DataFrame(columns=["id", "sentence", "local_label_no_context", "local_confidence_no_context", "local_label_with_context", "local_confidence_with_context"])
+
     df_local = pd.DataFrame(results).dropna(subset=["id"])
     logger.info("Local classification completed for all sentences.")
     return df_local
