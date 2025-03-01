@@ -353,6 +353,8 @@ def classify_local(sentences, embeddings, config):
     with ThreadPoolExecutor(max_workers=1) as executor:
         results = list(executor.map(lambda idx_item: classify_sentence_wrapper(*idx_item), enumerate(sentences)))
 
+    results = [r for r in results if r is not None]  # Remove None values
+    logger.debug(f"Valid local classification results: {len(results)}")
     df_local = pd.DataFrame(results).dropna(subset=["id"])
     logger.info("Local classification completed for all sentences.")
     return df_local
