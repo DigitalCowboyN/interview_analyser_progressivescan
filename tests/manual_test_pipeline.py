@@ -44,11 +44,16 @@ def run_manual_test():
     print("Generated embeddings.")
 
     print("Starting local classification...")
+    logger.debug(f"Sentences: {sentences}")
+    logger.debug(f"Embeddings shape: {embeddings.shape if hasattr(embeddings, 'shape') else type(embeddings)}")
+    logger.debug(f"Config parameters: {config.get('local_classification', {})}")
     logger.debug(f"Embeddings shape: {embeddings.shape if hasattr(embeddings, 'shape') else type(embeddings)}")
 
     # Step 3: Local Classification
     try:
+        logger.info("Calling classify_local()...")
         df_local = classify_local(sentences, embeddings, config)
+        logger.info("classify_local() completed successfully.")
     except Exception as e:
         logger.error(f"Error during local classification: {e}", exc_info=True)
         return
