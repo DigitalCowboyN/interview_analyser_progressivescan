@@ -174,6 +174,7 @@ def classify_local(sentences, embeddings, config):
                       local_confidence_no_context, local_label_with_context, local_confidence_with_context.
     """
     logger.info("Performing local classification using LLaMA-2 with two separate prompts (with and without context).")
+    logger.debug(f"Sentences for classification: {sentences}")
     results = []
     # Retrieve separate prompt templates and the confidence threshold from config.
     prompt_no_context = config["classification"]["local"]["prompt_no_context"]
