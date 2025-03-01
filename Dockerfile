@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --upgrade pip
 
 # Set OpenAI API key as an environment variable
-ENV OPENAI_API_KEY=${OPENAI_API_KEY}
+ARG OPENAI_API_KEY
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
 
 # Set LD_LIBRARY_PATH so the dynamic linker can find shared libraries
 ENV LD_LIBRARY_PATH="/usr/ctransformers/lib/local:/usr/lib:/app"
