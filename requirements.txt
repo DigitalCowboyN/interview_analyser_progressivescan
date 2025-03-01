@@ -41,4 +41,7 @@ pytest==7.4.0
 # Additional dependencies
 you
 
+# Ensure OpenAI dependencies are included
+openai
+
 # Ensure FFmpeg >= 4.2 is installed via Dockerfile or system-level package manager.
