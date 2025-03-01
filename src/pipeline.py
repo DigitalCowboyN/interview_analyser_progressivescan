@@ -109,7 +109,7 @@ def generate_embeddings(sentences, context_window=1):
 ############################################
 # Initialize the LLaMA-2 model using the path from config.yaml
 ############################################
-llama_model_path = config["classification"]["local"].get("llama_model_path", "/models/llama-2-7b-chat.Q4_K_M.gguf")
+llama_model_path = config["classification"]["local"].get("model_path", "/models/llama-2-7b-chat.Q4_K_M.gguf")
 llama_model = AutoModelForCausalLM.from_pretrained(llama_model_path, gpu_layers=0)
 llama_model.max_new_tokens = 50  # Increase response length to improve completeness
 

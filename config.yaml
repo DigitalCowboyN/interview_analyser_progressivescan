@@ -25,6 +25,7 @@ classification:
   local:
     model: "LLaMA-2"           # Indicate which model is being used (for reference)
     llama_model_path: "models/llama-2-7b-chat.Q4_K_M.gguf"
+    model_path: "models/llama-2-7b-chat.Q4_K_M.gguf"  # Added model path
     # Prmopt for local classification
     prompt_no_context: |
       [INSTRUCTION]
@@ -57,9 +58,8 @@ classification:
       - Do not include any extra commentary or explanation.
 
       [EXAMPLE]
-      Input Sentence: "I believe our current marketing strategy needs an overhaul."
-      Context: [0.1234, 0.5678, 0.9101, ...]
-      Output: <Marketing Strategy> [0.92]
+      Cluster Summary: "Discussions cover new marketing strategies, challenges in customer engagement, and innovative ideas for digital campaigns."
+      Output: <Marketing & Customer Engagement> [0.93]
 
       [TASK]
       For the given input, analyze the content carefully while taking into account the numerical context, and return only the topic label in the specified format.
