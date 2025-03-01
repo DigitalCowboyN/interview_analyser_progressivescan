@@ -5,6 +5,9 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import yaml
+import faulthandler
+
+faulthandler.enable()
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -51,7 +54,7 @@ def run_manual_test():
 
     # Step 3: Local Classification
     try:
-        logger.info("Calling classify_local()...")
+        logger.info("Calling classify_local() with %d sentences and embeddings of shape %s", len(sentences), embeddings.shape)
         df_local = classify_local(sentences, embeddings, config)
         logger.info("classify_local() completed successfully.")
     except Exception as e:
