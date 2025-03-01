@@ -30,7 +30,6 @@ hdbscan==0.8.33
 huggingface-hub>=0.14.1,<0.17.0
 
 # For LLaMA model == Removed and moved to Docker File
-# ctransformers==0.2.27 --no-binary :all:
 
 # SpaCy for sentence tokenization
 spacy==3.5.4
