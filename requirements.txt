@@ -38,4 +38,7 @@ spacy==3.5.4
 # pytest for automated testing
 pytest==7.4.0
 
+# Additional dependencies
+you
+
 # Ensure FFmpeg >= 4.2 is installed via Dockerfile or system-level package manager.
