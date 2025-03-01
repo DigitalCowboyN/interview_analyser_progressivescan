@@ -189,7 +189,8 @@ def classify_local(sentences, embeddings, config):
                 f"{prompt_no_context}\n\n"
                 f"Input Sentence: \"{item['sentence']}\"\n"
                 f"Context: []\n\n"
-                f"Please respond in the format: <Category> [Confidence Score]"
+                f"Please respond strictly in this format: <Category> [Confidence Score]\n"
+                f"Example: <Marketing Strategy> [0.85]"
             )
             try:
                 response_no_context = llama_model(full_prompt_no_context, max_new_tokens=30).strip()
@@ -207,11 +208,16 @@ def classify_local(sentences, embeddings, config):
         label_match_no_context = re.search(r"<(.*?)>", response_no_context)
         confidence_match_no_context = re.search(r"\[(.*?)\]", response_no_context)
 
-        if label_match_no_context:
+        if label_match_no_context and confidence_match_no_context:
             label_no_context = label_match_no_context.group(1).strip()
+            try:
+                confidence_no_context = float(confidence_match_no_context.group(1).strip())
+            except ValueError:
+                confidence_no_context = 0.0
         else:
-            fallback_match = re.search(r"(\w+)", response_no_context)
-            label_no_context = fallback_match.group(1).strip() if fallback_match else "Unknown"
+            logger.warning(f"Malformed response (no context) for sentence ID {item['id']}: {response_no_context}")
+            label_no_context = "Unknown"
+            confidence_no_context = 0.0
         try:
             confidence_no_context = float(confidence_match_no_context.group(1).strip()) if confidence_match_no_context else 0.0
         except ValueError:
