@@ -635,6 +635,10 @@ def final_classification(merged_df, config):
     """
     logger.info("Performing final meta-classification.")
     from sklearn.preprocessing import StandardScaler
+    if merged_df.empty:
+        logger.error("Merged DataFrame is empty. Skipping final classification.")
+        return merged_df
+
     scaler = StandardScaler()
     merged_df["local_conf_norm"] = scaler.fit_transform(merged_df[["local_confidence_with_context"]])
     logger.info("Final classification complete.")
