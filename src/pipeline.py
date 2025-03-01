@@ -275,7 +275,7 @@ def classify_local(sentences, embeddings, config):
             "local_confidence_with_context": confidence_with_context
         }
 
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=1) as executor:
         results = list(executor.map(classify_sentence, range(len(sentences)), sentences))
 
     # Wrap the loop in a tqdm progress bar.
@@ -291,7 +291,8 @@ def classify_sentence(idx, item, prompt_no_context, prompt_with_context, confide
             import subprocess
             import shlex
 
-            command = f'python -c "from ctransformers import AutoModelForCausalLM; model = AutoModelForCausalLM.from_pretrained(\'{llama_model_path}\', gpu_layers=0); print(model(\'{full_prompt_no_context}\', max_new_tokens=30))"'
+            safe_prompt = full_prompt_no_context.replace('"', '\\"').replace("'", "\\'")
+            command = f'python -c "from ctransformers import AutoModelForCausalLM; model = AutoModelForCausalLM.from_pretrained(\'{llama_model_path}\', gpu_layers=0); print(model(\'{safe_prompt}\', max_new_tokens=30))"'
             try:
                 response_no_context = subprocess.check_output(shlex.split(command), text=True, stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError as e:
