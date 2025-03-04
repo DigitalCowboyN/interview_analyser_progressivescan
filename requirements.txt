@@ -48,7 +48,4 @@ you
 # Ensure OpenAI dependencies are included
 openai
 
-# Ensure 'you' package is included
-you
-
 # Ensure FFmpeg >= 4.2 is installed via Dockerfile or system-level package manager.
